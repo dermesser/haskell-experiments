@@ -1,7 +1,13 @@
+module SWIO where
+
+{-
+    SWIO combines the State, Writer and IO monads. Is an experiment for
+    my Brainfuch interpreter which just needs such a type (so far realized
+    using mtl monad transformers: WriterT [StackCode] (StateT Stack IO)
+-}
+
 import Data.Monoid
 import System.IO
-
-main = undefined
 
 newtype WSIO w s a = WSIO {runWSIO :: s -> IO (a,w,s) }
 

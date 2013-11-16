@@ -1,4 +1,10 @@
-module Misc where
+module RWS where
+
+{-
+    This is my implementation of the RWS and RWST monads. RWS doesn't use transformers
+    but is a standalone combination monad with the functionality of Reader, Writer and State.
+-}
+
 
 import TransformerClass
 

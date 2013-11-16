@@ -1,15 +1,14 @@
 module Transformers where
 
+{-
+    This is a collection of various monad transformers, independent of the usually used
+    transformer libraries like mtl.
+-}
 
+
+import TransformerClass
 import Data.Monoid
 import Control.Monad (liftM)
---import Data.Functor.Identity
---import Control.Monad.Identity (Identity)
-
--- Transformer class
-
-class MonadTrans m where
-    lift :: (Monad n) => n a -> m n a
 
 -- Maybe Transformer
 newtype MaybeT m a = MaybeT { runMaybeT :: m (Maybe a) }
