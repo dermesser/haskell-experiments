@@ -54,6 +54,12 @@ instance Monad m => Monad (StateT s m) where
 instance MonadTrans (StateT s) where
     lift x = StateT $ \s -> x >>= \x' -> return (x',s)
 
+get :: Monad m => StateT s m s
+get = StateT $ \s -> return (s,s)
+
+put :: Monad m => a -> StateT s m a
+put a = StateT $ \s -> return (a,s)
+
 -- Writer Transformer
 
 newtype WriterT w m a = WriterT { runWriterT :: m (a,w) }
@@ -67,6 +73,9 @@ instance (Monoid w, Monad m) => Monad (WriterT w m) where
 
 instance Monoid w => MonadTrans (WriterT w) where
     lift x = WriterT $ x >>= \x' -> return (x',mempty)
+
+tell :: (Monoid n, Monad m) => n -> WriterT n m ()
+tell n = WriterT . return $ ((),n)
 
 -- Identity Transformer
 
@@ -103,6 +112,17 @@ instance Monad m => Monad (ErrorT e m) where
 
 instance MonadTrans (ErrorT e) where
     lift x = ErrorT $ x >>= \x' -> return (Right x')
+
+throwError :: Monad m => e -> ErrorT e m ()
+throwError e = ErrorT . return . Left $ e
+
+catchError :: Monad m => ErrorT e m a -> (e -> ErrorT e m a) -> ErrorT e m a
+catchError m f = ErrorT $ do
+                v <- runErrorT m
+                case v of
+                    Left e -> runErrorT $ f e
+                    Right c -> return (Right c)
+
 ----
 
 type Reader' r a = ReaderT r Identity a
@@ -136,50 +156,4 @@ writer t = WriterT (Identity t)
 
 runWriter :: Monoid w => Writer' w a -> (a,w)
 runWriter = runIdentity . runWriterT
-
------
-
-type MyT = IdentityT (ReaderT Int (WriterT String (StateT [Int] Identity))) Int
-
-pop :: State' [Int] Int
-pop = state $ \(s:ss) -> (s,ss)
-
-push :: Int -> State' [Int] ()
-push i = state $ \s -> ((),i:s)
-
-pushs :: [Int] -> State' [Int] ()
-pushs is = state $ \s -> ((),is++s)
-
-testf :: MyT
-testf = do
-        lift . lift . lift $ pushs [1,2,3,4]
-        lift . lift . WriterT $ return (0,"pushed [1,2,3,4]")
-        lift . lift . lift $ pop
-        lift . lift . lift . lift $ Identity (0,"pop")
-        lift . lift . lift $ pushs [5,6,7,8]
-        lift . lift . WriterT $ return (0,"pushed [5,6,7,8]")
-        lift . lift . lift $ pop
-        lift . lift . WriterT $ return (0,"pop")
-        lift . lift . lift $ pop
-        x <- lift ask
-        lift . lift . lift $ push x
-        lift . lift . lift $ pop
---
-
-type MyT' = StateT [Int] (ReaderT Int (Identity)) Int
-
-pop' = StateT $ \(e:es) -> return (e,es)
-push' x = StateT $ \s -> ReaderT $ \_ -> ((),x:s)
-
-pushdef = StateT $ \s -> ReaderT $ \r -> Identity ((),r:s)
-
-testf2 :: MyT'
-testf2 = do
-    push' 4
-    push' 4
-    pushdef
-    pop'
-    pushdef
-    pushdef
-    pop'
 
