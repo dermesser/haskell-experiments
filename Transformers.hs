@@ -10,6 +10,18 @@ import TransformerClass
 import Data.Monoid
 import Control.Monad (liftM)
 
+-- List Transformer
+
+newtype ListT m a = ListT { runListT :: m [a] }
+
+instance Monad m => Monad (ListT m) where
+    return = ListT . return . (:[])
+    m >>= f = ListT $ do
+            xs <- runListT m
+            y <- sequence . map (runListT . f) $ xs
+            return $ concat y
+
+
 -- Maybe Transformer
 newtype MaybeT m a = MaybeT { runMaybeT :: m (Maybe a) }
 
@@ -156,4 +168,24 @@ writer t = WriterT (Identity t)
 
 runWriter :: Monoid w => Writer' w a -> (a,w)
 runWriter = runIdentity . runWriterT
+
+--------------------------------
+
+type T1 = StateT [Int] (ReaderT Int (WriterT [Int] Identity)) Int
+
+push :: Int -> T1
+push i = StateT $ \s -> return (i,i:s)
+
+pushDef :: T1
+pushDef = do
+        d <- lift ask
+        push d
+
+f1 :: T1
+f1 = do
+    push 7
+    pushDef
+    pushDef
+    lift . lift . tell $ [1,2,3]
+    return 8
 
